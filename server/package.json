@@ -1,0 +1,34 @@
+{
+  "name": "artconnect-server",
+  "version": "1.0.0",
+  "description": "Backend API server for ArtConnect platform",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "kill-port": "node kill-port.js"
+  },
+  "dependencies": {
+    "@google-cloud/vision": "^5.3.4",
+    "@vitalets/google-translate-api": "^9.2.1",
+    "axios": "^1.7.9",
+    "cloudinary": "^2.8.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "expo-file-system": "^19.0.21",
+    "express": "^4.18.2",
+    "firebase-admin": "^13.0.1",
+    "multer": "^2.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  },
+  "keywords": [
+    "artconnect",
+    "api",
+    "express",
+    "firebase"
+  ],
+  "author": "ArtConnect Team",
+  "license": "MIT"
+}
