@@ -12,16 +12,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../assets/Colors';
 import { useAuth } from '../../../context/authContext';
 import { useRouter } from 'expo-router';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../FirebaseConfig';
 import ImageDisplay from '../../../components/ImageDisplay';
+import { Alert } from 'react-native';
 
 export default function MyPurchasesScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all'); // all, pending, confirmed, shipped, delivered
+  const [filter, setFilter] = useState('all'); // all, pending, confirmed, shipped, delivery_confirmation_pending, delivered
 
   useEffect(() => {
     fetchMyPurchases();
@@ -60,6 +61,7 @@ export default function MyPurchasesScreen() {
       case 'pending': return '#ff9800';
       case 'confirmed': return '#2196f3';
       case 'shipped': return '#9c27b0';
+      case 'delivery_confirmation_pending': return '#ff9800'; // Orange - awaiting buyer confirmation
       case 'delivered': return '#4caf50';
       case 'cancelled': return '#f44336';
       default: return '#999';
@@ -71,10 +73,64 @@ export default function MyPurchasesScreen() {
       case 'pending': return 'time-outline';
       case 'confirmed': return 'checkmark-circle-outline';
       case 'shipped': return 'car-outline';
+      case 'delivery_confirmation_pending': return 'hourglass-outline';
       case 'delivered': return 'checkmark-done-circle-outline';
       case 'cancelled': return 'close-circle-outline';
       default: return 'help-circle-outline';
     }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'delivery_confirmation_pending': return 'Confirmation Pending';
+      default: return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ');
+    }
+  };
+
+  const handleConfirmDelivery = async (purchaseId) => {
+    Alert.alert(
+      'Confirm Delivery',
+      'Did you receive the artwork? Please confirm.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          onPress: async () => {
+            try {
+              await updateDoc(doc(db, 'PURCHASES', purchaseId), {
+                status: 'delivered',
+                updatedAt: new Date().toISOString(),
+                deliveredAt: new Date().toISOString(),
+              });
+              
+              // Refresh the list
+              fetchMyPurchases();
+              
+              // Send email notification
+              try {
+                const purchase = purchases.find(p => p.id === purchaseId);
+                if (purchase) {
+                  const { default: api } = await import('../../../utils/api');
+                  await api.post('/api/purchases/send-status-update', {
+                    email: purchase.artistEmail,
+                    name: purchase.artistName,
+                    artworkTitle: purchase.artworkTitle,
+                    status: 'delivered',
+                  });
+                }
+              } catch (emailError) {
+                console.log('Email notification failed (non-critical):', emailError);
+              }
+              
+              Alert.alert('Success', 'Delivery confirmed successfully!');
+            } catch (error) {
+              console.error('Error confirming delivery:', error);
+              Alert.alert('Error', 'Failed to confirm delivery. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -144,9 +200,19 @@ export default function MyPurchasesScreen() {
                   color={getStatusColor(purchase.status)}
                 />
                 <Text style={[styles.statusText, { color: getStatusColor(purchase.status) }]}>
-                  {purchase.status.charAt(0).toUpperCase() + purchase.status.slice(1)}
+                  {getStatusLabel(purchase.status)}
                 </Text>
               </View>
+
+              {purchase.status === 'delivery_confirmation_pending' && (
+                <TouchableOpacity
+                  style={styles.confirmButton}
+                  onPress={() => handleConfirmDelivery(purchase.id)}
+                >
+                  <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                  <Text style={styles.confirmButtonText}>Confirm Delivery</Text>
+                </TouchableOpacity>
+              )}
 
               <View style={styles.detailsContainer}>
                 <View style={styles.detailRow}>
@@ -315,5 +381,21 @@ const styles = StyleSheet.create({
     color: '#111811',
     flex: 2,
     textAlign: 'right',
+  },
+  confirmButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4caf50',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 12,
+    gap: 8,
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

@@ -61,21 +61,62 @@ export default function UserProfileScreen() {
       }));
       setUserPosts(posts);
       
-      // Fetch user stats
+      // Fetch user stats - try backend API first, fallback to Firestore
       try {
         const statsResponse = await usersAPI.getUserStats(userId);
         if (statsResponse.success) {
           setStats(statsResponse.data);
+        } else {
+          // Fallback to Firestore
+          await fetchStatsFromFirestore(posts.length);
         }
       } catch (statsError) {
-        console.log('Backend API not available - using default stats');
-        setStats({ posts: posts.length, followers: 0, following: 0 });
+        console.log('Backend API not available - fetching stats from Firestore');
+        // Fallback to Firestore directly
+        await fetchStatsFromFirestore(posts.length);
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
       Alert.alert('Error', 'Failed to load user profile');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStatsFromFirestore = async (postsCount) => {
+    try {
+      // Fetch followers count
+      let followersCount = 0;
+      try {
+        const followersDoc = await getDoc(doc(db, 'FOLLOWERS', userId));
+        if (followersDoc.exists()) {
+          const followersData = followersDoc.data();
+          followersCount = followersData.followers?.length || 0;
+        }
+      } catch (err) {
+        console.log('Error fetching followers:', err);
+      }
+
+      // Fetch following count
+      let followingCount = 0;
+      try {
+        const followingDoc = await getDoc(doc(db, 'FOLLOWING', userId));
+        if (followingDoc.exists()) {
+          const followingData = followingDoc.data();
+          followingCount = followingData.following?.length || 0;
+        }
+      } catch (err) {
+        console.log('Error fetching following:', err);
+      }
+
+      setStats({
+        posts: postsCount,
+        followers: followersCount,
+        following: followingCount
+      });
+    } catch (error) {
+      console.error('Error fetching stats from Firestore:', error);
+      setStats({ posts: postsCount, followers: 0, following: 0 });
     }
   };
 
@@ -135,7 +176,8 @@ export default function UserProfileScreen() {
         }
         
         setIsFollowing(false);
-        setStats(prev => ({ ...prev, followers: Math.max(0, prev.followers - 1) }));
+        // Refresh stats from Firestore after unfollow
+        await fetchStatsFromFirestore(userPosts.length);
       } else {
         // Follow
         // Add to current user's following list
@@ -165,7 +207,8 @@ export default function UserProfileScreen() {
         }
         
         setIsFollowing(true);
-        setStats(prev => ({ ...prev, followers: prev.followers + 1 }));
+        // Refresh stats from Firestore after follow
+        await fetchStatsFromFirestore(userPosts.length);
       }
     } catch (error) {
       console.error('Error following/unfollowing user:', error);
@@ -241,15 +284,23 @@ export default function UserProfileScreen() {
             <Text style={styles.statLabel}>Posts</Text>
           </View>
           <View style={styles.statDivider} />
-          <View style={styles.statItem}>
+          <TouchableOpacity
+            style={styles.statItem}
+            onPress={() => router.push(`/(tabs)/profile/follow-list?userId=${userId}&type=followers`)}
+            activeOpacity={0.7}
+          >
             <Text style={styles.statNumber}>{stats.followers}</Text>
             <Text style={styles.statLabel}>Followers</Text>
-          </View>
+          </TouchableOpacity>
           <View style={styles.statDivider} />
-          <View style={styles.statItem}>
+          <TouchableOpacity
+            style={styles.statItem}
+            onPress={() => router.push(`/(tabs)/profile/follow-list?userId=${userId}&type=following`)}
+            activeOpacity={0.7}
+          >
             <Text style={styles.statNumber}>{stats.following}</Text>
             <Text style={styles.statLabel}>Following</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Posts Grid */}
@@ -266,8 +317,7 @@ export default function UserProfileScreen() {
                   key={post.id}
                   style={styles.postThumbnail}
                   onPress={() => {
-                    // Navigate to post detail or show in modal
-                    Alert.alert('Post', post.title || 'Untitled');
+                    router.push(`/(tabs)/post/${post.id}`);
                   }}
                 >
                   <ImageDisplay

@@ -83,10 +83,14 @@ export default function SearchScreen() {
   };
 
   const handleViewProfile = (userId) => {
+    if (!userId) return;
+    
+    // If it's the current user's profile, go to own profile tab
     if (userId === user?.uid) {
-      router.push('/profile');
+      router.push('/(tabs)/profile');
     } else {
-      router.push(`/profile/${userId}`);
+      // Otherwise, go to the user's profile page
+      router.push(`/(tabs)/profile/${userId}`);
     }
   };
 

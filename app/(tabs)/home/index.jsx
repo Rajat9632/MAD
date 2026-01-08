@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   RefreshControl,
   ScrollView,
   Share,
@@ -156,12 +157,17 @@ export default function ArtConnectApp() {
   const [refreshing, setRefreshing] = useState(false);
   const [commentModalVisible, setCommentModalVisible] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState(null);
+  const [menuModalVisible, setMenuModalVisible] = useState(false);
 
   const handleViewProfile = (userId) => {
-    if (userId && userId !== user?.uid) {
-      router.push(`/profile/${userId}`);
-    } else if (userId === user?.uid) {
-      router.push('/profile');
+    if (!userId) return;
+    
+    // If it's the current user's profile, go to own profile tab
+    if (userId === user?.uid) {
+      router.push('/(tabs)/profile');
+    } else {
+      // Otherwise, go to the user's profile page
+      router.push(`/(tabs)/profile/${userId}`);
     }
   };
 
@@ -376,18 +382,7 @@ export default function ArtConnectApp() {
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.iconButton}
-          onPress={() => {
-            Alert.alert(
-              'Menu',
-              'Choose an option',
-              [
-                { text: 'Profile', onPress: () => router.push('/profile') },
-                { text: 'Settings', onPress: () => router.push('/profile/settings') },
-                { text: 'Help', onPress: () => router.push('/profile/help') },
-                { text: 'Cancel', style: 'cancel' },
-              ]
-            );
-          }}
+          onPress={() => setMenuModalVisible(true)}
         >
           <Icon name="menu" size={24} color="#111811" />
         </TouchableOpacity>
@@ -458,6 +453,53 @@ export default function ArtConnectApp() {
         postId={selectedPostId}
         onCommentAdded={handleCommentAdded}
       />
+
+      {/* Menu Modal */}
+      <Modal
+        visible={menuModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setMenuModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setMenuModalVisible(false)}
+        >
+          <View style={styles.menuModal} onStartShouldSetResponder={() => true}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuModalVisible(false);
+                router.push('/profile');
+              }}
+            >
+              <Ionicons name="person-outline" size={24} color="#111811" />
+              <Text style={styles.menuItemText}>Profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuModalVisible(false);
+                router.push('/profile/settings');
+              }}
+            >
+              <Ionicons name="settings-outline" size={24} color="#111811" />
+              <Text style={styles.menuItemText}>Settings</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuModalVisible(false);
+                router.push('/profile/help');
+              }}
+            >
+              <Ionicons name="help-circle-outline" size={24} color="#111811" />
+              <Text style={styles.menuItemText}>Help</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -662,5 +704,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#111811',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+    paddingTop: 60,
+    paddingLeft: 16,
+  },
+  menuModal: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: 200,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    overflow: 'hidden',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  menuItemText: {
+    fontSize: 16,
+    color: '#111811',
+    fontWeight: '500',
   },
 });

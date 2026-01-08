@@ -52,23 +52,76 @@ export default function ProfileScreen() {
         setUserData(userDoc.data());
       }
       
-      // Fetch user stats from backend API
-      // Note: This requires the backend server to be running
-      // If backend is not available, stats will default to 0
+      // Fetch user posts count
+      let postsCount = 0;
+      try {
+        const postsQuery = query(
+          collection(db, 'POSTS'),
+          where('userId', '==', user.uid)
+        );
+        const postsSnapshot = await getDocs(postsQuery);
+        postsCount = postsSnapshot.size;
+      } catch (err) {
+        console.log('Error fetching posts:', err);
+      }
+      
+      // Fetch user stats - try backend API first, fallback to Firestore
       try {
         const statsResponse = await usersAPI.getUserStats(user.uid);
         if (statsResponse.success) {
           setStats(statsResponse.data);
+        } else {
+          // Fallback to Firestore
+          await fetchStatsFromFirestore(postsCount);
         }
       } catch (statsError) {
-        // Silently fail - backend might not be running
-        // Stats will remain at default values (0)
-        console.log('Backend API not available - using default stats');
+        console.log('Backend API not available - fetching stats from Firestore');
+        // Fallback to Firestore directly
+        await fetchStatsFromFirestore(postsCount);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStatsFromFirestore = async (postsCount) => {
+    try {
+      if (!user) return;
+      
+      // Fetch followers count
+      let followersCount = 0;
+      try {
+        const followersDoc = await getDoc(doc(db, 'FOLLOWERS', user.uid));
+        if (followersDoc.exists()) {
+          const followersData = followersDoc.data();
+          followersCount = followersData.followers?.length || 0;
+        }
+      } catch (err) {
+        console.log('Error fetching followers:', err);
+      }
+
+      // Fetch following count
+      let followingCount = 0;
+      try {
+        const followingDoc = await getDoc(doc(db, 'FOLLOWING', user.uid));
+        if (followingDoc.exists()) {
+          const followingData = followingDoc.data();
+          followingCount = followingData.following?.length || 0;
+        }
+      } catch (err) {
+        console.log('Error fetching following:', err);
+      }
+
+      setStats({
+        posts: postsCount,
+        followers: followersCount,
+        following: followingCount
+      });
+    } catch (error) {
+      console.error('Error fetching stats from Firestore:', error);
+      setStats({ posts: postsCount || 0, followers: 0, following: 0 });
     }
   };
 
@@ -178,15 +231,23 @@ export default function ProfileScreen() {
             <Text style={styles.statLabel}>Posts</Text>
           </View>
           <View style={styles.statDivider} />
-          <View style={styles.statItem}>
+          <TouchableOpacity
+            style={styles.statItem}
+            onPress={() => user && router.push(`/(tabs)/profile/follow-list?userId=${user.uid}&type=followers`)}
+            activeOpacity={0.7}
+          >
             <Text style={styles.statNumber}>{stats.followers}</Text>
             <Text style={styles.statLabel}>Followers</Text>
-          </View>
+          </TouchableOpacity>
           <View style={styles.statDivider} />
-          <View style={styles.statItem}>
+          <TouchableOpacity
+            style={styles.statItem}
+            onPress={() => user && router.push(`/(tabs)/profile/follow-list?userId=${user.uid}&type=following`)}
+            activeOpacity={0.7}
+          >
             <Text style={styles.statNumber}>{stats.following}</Text>
             <Text style={styles.statLabel}>Following</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Menu Items */}

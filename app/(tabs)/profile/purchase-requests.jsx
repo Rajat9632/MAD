@@ -92,7 +92,7 @@ export default function PurchaseRequestsScreen() {
     const statusOptions = {
       pending: ['confirmed', 'cancelled'],
       confirmed: ['shipped', 'cancelled'],
-      shipped: ['delivered'],
+      shipped: ['delivery_confirmation_pending'], // Changed: seller marks as delivered, waiting for buyer confirmation
     };
 
     const options = statusOptions[currentStatus] || [];
@@ -100,9 +100,13 @@ export default function PurchaseRequestsScreen() {
 
     Alert.alert(
       'Update Status',
-      'Select new status',
+      currentStatus === 'shipped' 
+        ? 'Mark as delivered? This will wait for buyer confirmation.'
+        : 'Select new status',
       options.map(option => ({
-        text: option.charAt(0).toUpperCase() + option.slice(1),
+        text: option === 'delivery_confirmation_pending' 
+          ? 'Mark as Delivered' 
+          : option.charAt(0).toUpperCase() + option.slice(1).replace(/_/g, ' '),
         onPress: () => updateRequestStatus(requestId, option),
       })).concat([{ text: 'Cancel', style: 'cancel' }])
     );
@@ -113,9 +117,17 @@ export default function PurchaseRequestsScreen() {
       case 'pending': return '#ff9800';
       case 'confirmed': return '#2196f3';
       case 'shipped': return '#9c27b0';
+      case 'delivery_confirmation_pending': return '#ff9800'; // Orange - awaiting buyer confirmation
       case 'delivered': return '#4caf50';
       case 'cancelled': return '#f44336';
       default: return '#999';
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'delivery_confirmation_pending': return 'Confirmation Pending';
+      default: return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ');
     }
   };
 
@@ -178,7 +190,7 @@ export default function PurchaseRequestsScreen() {
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(request.status) + '20' }]}>
                   <Text style={[styles.statusText, { color: getStatusColor(request.status) }]}>
-                    {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                    {getStatusLabel(request.status)}
                   </Text>
                 </View>
               </View>
@@ -198,13 +210,20 @@ export default function PurchaseRequestsScreen() {
                 Requested on: {new Date(request.createdAt).toLocaleDateString()}
               </Text>
 
-              {request.status !== 'delivered' && request.status !== 'cancelled' && (
+              {request.status !== 'delivered' && request.status !== 'cancelled' && request.status !== 'delivery_confirmation_pending' && (
                 <TouchableOpacity
                   style={styles.updateButton}
                   onPress={() => handleStatusUpdate(request.id, request.status)}
                 >
                   <Text style={styles.updateButtonText}>Update Status</Text>
                 </TouchableOpacity>
+              )}
+              {request.status === 'delivery_confirmation_pending' && (
+                <View style={styles.waitingConfirmationContainer}>
+                  <Text style={styles.waitingConfirmationText}>
+                    ⏳ Waiting for buyer to confirm delivery
+                  </Text>
+                </View>
               )}
             </View>
           ))}
@@ -359,5 +378,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#111811',
+  },
+  waitingConfirmationContainer: {
+    backgroundColor: '#fff3cd',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  waitingConfirmationText: {
+    fontSize: 14,
+    color: '#856404',
+    fontWeight: '500',
   },
 });

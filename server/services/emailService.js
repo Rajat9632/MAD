@@ -133,7 +133,8 @@ async function sendStatusUpdateEmail({ email, name, artworkTitle, status }) {
   const statusMessages = {
     confirmed: 'Your purchase request has been confirmed by the artist.',
     shipped: 'Your artwork has been shipped!',
-    delivered: 'Your artwork has been delivered!',
+    delivery_confirmation_pending: 'Your artwork has been delivered! Please confirm receipt in the app.',
+    delivered: 'Your artwork delivery has been confirmed!',
     cancelled: 'Your purchase request has been cancelled.',
   };
 
