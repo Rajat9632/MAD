@@ -1,24 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  Image,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  ActivityIndicator,
-  RefreshControl,
-  Alert,
-  Share,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../../assets/Colors';
-import { useAuth } from '../../../context/authContext';
-import { getPosts, likePost, deletePost } from '../../../utils/firestore';
 import { useRouter } from 'expo-router';
-import ImageDisplay from '../../../components/ImageDisplay';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { Colors } from '../../../assets/Colors';
 import CommentModal from '../../../components/CommentModal';
+import ImageDisplay from '../../../components/ImageDisplay';
+import { useAuth } from '../../../context/authContext';
+import { deletePost, getPosts, likePost } from '../../../utils/firestore';
 
 const Icon = ({ name, size = 24, color = Colors.bttn }) => {
   const iconMap = {
@@ -55,6 +53,10 @@ const ArtisanPost = ({
   onComment,
   onShare,
   onDelete,
+  onViewProfile,
+  onBuy,
+  isForSale = false,
+  price = null,
   currentUserId,
 }) => {
   const isLiked = likedBy?.includes(userId);
@@ -62,14 +64,19 @@ const ArtisanPost = ({
   return (
     <View style={styles.postContainer}>
       <View style={styles.profileRow}>
-        <ImageDisplay
-          source={profileImage || require('../../../assets/images/avtar.png')}
-          style={styles.profileImage}
-        />
-        <View style={{ flex: 1, marginLeft: 10 }}>
-          <Text style={styles.profileName}>{name || 'Artist'}</Text>
-          <Text style={styles.profileUsername}>{username || '@artist'}</Text>
-        </View>
+        <TouchableOpacity
+          style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
+          onPress={() => onViewProfile && onViewProfile(postUserId)}
+        >
+          <ImageDisplay
+            source={profileImage || require('../../../assets/images/avtar.png')}
+            style={styles.profileImage}
+          />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={styles.profileName}>{name || 'Artist'}</Text>
+            <Text style={styles.profileUsername}>{username || '@artist'}</Text>
+          </View>
+        </TouchableOpacity>
         {currentUserId === postUserId && onDelete && (
           <TouchableOpacity
             onPress={() => onDelete(id)}
@@ -92,6 +99,18 @@ const ArtisanPost = ({
         )}
       </View>
       <Text style={styles.postDescription}>{description || ''}</Text>
+      
+      {/* For Sale Badge and Price */}
+      {isForSale && price && (
+        <View style={styles.saleContainer}>
+          <View style={styles.saleBadge}>
+            <Ionicons name="pricetag" size={16} color="#fff" />
+            <Text style={styles.saleText}>For Sale</Text>
+          </View>
+          <Text style={styles.priceText}>₹{price.toLocaleString()}</Text>
+        </View>
+      )}
+      
       <View style={styles.interactionRow}>
         <TouchableOpacity 
           style={styles.interactionItem}
@@ -115,6 +134,17 @@ const ArtisanPost = ({
           <Text style={styles.interactionText}>{shares || 0}</Text>
         </TouchableOpacity>
       </View>
+      
+      {/* Buy Button - Only show if for sale and not the owner */}
+      {isForSale && price && currentUserId !== postUserId && (
+        <TouchableOpacity
+          style={styles.buyButton}
+          onPress={() => onBuy && onBuy(id, price, name)}
+        >
+          <Ionicons name="cart" size={20} color="#fff" />
+          <Text style={styles.buyButtonText}>Buy Now - ₹{price.toLocaleString()}</Text>
+        </TouchableOpacity>
+      )}
     </View>
   )
 };
@@ -126,6 +156,25 @@ export default function ArtConnectApp() {
   const [refreshing, setRefreshing] = useState(false);
   const [commentModalVisible, setCommentModalVisible] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState(null);
+
+  const handleViewProfile = (userId) => {
+    if (userId && userId !== user?.uid) {
+      router.push(`/profile/${userId}`);
+    } else if (userId === user?.uid) {
+      router.push('/profile');
+    }
+  };
+
+  const handleBuy = (postId, price, artistName) => {
+    router.push({
+      pathname: '/post/purchase',
+      params: {
+        postId,
+        price: price.toString(),
+        artistName,
+      },
+    });
+  };
 
   useEffect(() => {
     fetchPosts();
@@ -343,7 +392,10 @@ export default function ArtConnectApp() {
           <Icon name="menu" size={24} color="#111811" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>ARTCONNECT</Text>
-        <TouchableOpacity style={styles.iconButton}>
+        <TouchableOpacity 
+          style={styles.iconButton}
+          onPress={() => router.push('/(tabs)/home/search')}
+        >
           <Icon name="search" size={24} color="#111811" />
         </TouchableOpacity>
       </View>
@@ -386,6 +438,10 @@ export default function ArtConnectApp() {
                 onComment={() => handleComment(post.id)}
                 onShare={() => handleShare(post.id)}
                 onDelete={handleDelete}
+                onViewProfile={handleViewProfile}
+                onBuy={handleBuy}
+                isForSale={post.isForSale || false}
+                price={post.price || null}
               />
             ))
           )}
@@ -559,5 +615,52 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#618961',
     textAlign: 'center',
+  },
+  saleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#f8f9fa',
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  saleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.bttn,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  saleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#111811',
+  },
+  priceText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111811',
+  },
+  buyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.bttn,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginHorizontal: 12,
+    marginTop: 8,
+    marginBottom: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  buyButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111811',
   },
 });

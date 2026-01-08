@@ -33,6 +33,8 @@ export default function PostPreview() {
     materials,
     techniques,
     story,
+    isForSale,
+    price,
   } = params;
 
   const caption = story || `${title}\n\n${materials ? `Materials: ${materials}` : ''}\n${techniques ? `Techniques: ${techniques}` : ''}`;
@@ -88,6 +90,8 @@ export default function PostPreview() {
         story: story || "",
         materials: materials || "",
         techniques: techniques || "",
+        isForSale: isForSale === 'true' || isForSale === true,
+        price: isForSale === 'true' || isForSale === true ? parseFloat(price) || 0 : null,
         createdAt: new Date().toISOString(),
         likes: 0,
         comments: 0,

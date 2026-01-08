@@ -20,6 +20,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/social', require('./routes/social'));
 app.use('/api/geolocation', require('./routes/geolocation'));
 app.use('/api/storage', require('./routes/storage'));
+app.use('/api/purchases', require('./routes/purchases'));
 
 // Health check
 app.get('/health', (req, res) => {

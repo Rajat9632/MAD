@@ -1,30 +1,69 @@
 import { View, Text } from 'react-native';
 import React from 'react';
-import { HeaderShownContext } from "@react-navigation/elements";
-import { Stack } from "expo-router";
 import { Tabs } from 'expo-router';
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-
-// const Tab = createBottomTabNavigator();
+import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '../../assets/Colors';
 
 export default function TabLayout() {
   return (
     <SafeAreaProvider>
-
-      {/* header shown false will remove the header bar */}
-      
-      <Tabs screenOptions={{headerShown:false}} >
-        <Tabs.Screen name='home' options={{title:"home"}}/>
-        <Tabs.Screen name='post' options={{title:"post_upload"}}/>
-        <Tabs.Screen name='videos' options={{title:"reels"}}/>
-        <Tabs.Screen name='profile' options={{title:"user"}}/>
-        
-        </Tabs>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: Colors.bttn,
+          tabBarInactiveTintColor: '#999',
+          tabBarStyle: {
+            backgroundColor: '#fff',
+            borderTopWidth: 1,
+            borderTopColor: '#f0f0f0',
+            height: 60,
+            paddingBottom: 8,
+            paddingTop: 8,
+          },
+          tabBarLabelStyle: {
+            fontSize: 12,
+            fontWeight: '600',
+          },
+        }}
+      >
+        <Tabs.Screen
+          name="home"
+          options={{
+            title: 'Home',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="home" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="post"
+          options={{
+            title: 'Create',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="add-circle-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="videos"
+          options={{
+            title: 'Reels',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="videocam-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: 'Profile',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="person-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      </Tabs>
     </SafeAreaProvider>
-
-    
-
   );
-  
 }

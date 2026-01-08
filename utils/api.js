@@ -72,6 +72,14 @@ export const aiAPI = {
     });
     return response.data;
   },
+  
+  generateVideoReel: async (artworkData, imageUrls = []) => {
+    const response = await api.post('/api/ai/generate-video-reel', {
+      artworkData,
+      imageUrls,
+    });
+    return response.data;
+  },
 };
 
 // Posts API calls

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -30,8 +30,30 @@ export default function StoryScreen() {
   const [imageUri, setImageUri] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isForSale, setIsForSale] = useState(false);
+  const [price, setPrice] = useState("");
+  const [userRole, setUserRole] = useState(null);
   const router = useRouter();
   const { user } = useAuth();
+
+  // Fetch user role
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      if (user) {
+        try {
+          const { doc, getDoc } = await import('firebase/firestore');
+          const { db } = await import('../../../FirebaseConfig');
+          const userDoc = await getDoc(doc(db, 'USERS', user.uid));
+          if (userDoc.exists()) {
+            setUserRole(userDoc.data()?.Role);
+          }
+        } catch (error) {
+          console.error('Error fetching user role:', error);
+        }
+      }
+    };
+    fetchUserRole();
+  }, [user]);
 
   const pickImage = async () => {
     try {
@@ -193,6 +215,8 @@ export default function StoryScreen() {
           materials,
           techniques,
           story,
+          isForSale: isForSale ? 'true' : 'false',
+          price: price || '',
         },
       });
     } catch (error) {
@@ -332,6 +356,39 @@ export default function StoryScreen() {
           </View>
         )}
 
+        {/* For Sale Toggle - Only for Artists */}
+        {userRole === 'Artist' && (
+          <View style={styles.inputWrapper}>
+            <View style={styles.toggleContainer}>
+              <Text style={styles.label}>Mark as For Sale</Text>
+              <TouchableOpacity
+                style={[styles.toggle, isForSale && styles.toggleActive]}
+                onPress={() => setIsForSale(!isForSale)}
+              >
+                <View style={[styles.toggleThumb, isForSale && styles.toggleThumbActive]} />
+              </TouchableOpacity>
+            </View>
+            
+            {isForSale && (
+              <View style={styles.priceContainer}>
+                <Text style={styles.label}>Price (₹)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter price"
+                  placeholderTextColor="#897561"
+                  value={price}
+                  onChangeText={(text) => {
+                    // Only allow numbers
+                    const numericValue = text.replace(/[^0-9]/g, '');
+                    setPrice(numericValue);
+                  }}
+                  keyboardType="numeric"
+                />
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Preview Button */}
         <View style={styles.buttonWrapper}>
           <TouchableOpacity
@@ -423,6 +480,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#181411",
     backgroundColor: "#fff",
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  toggle: {
+    width: 50,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#e6e0db',
+    justifyContent: 'center',
+    padding: 2,
+  },
+  toggleActive: {
+    backgroundColor: Colors.bttn,
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    alignSelf: 'flex-start',
+  },
+  toggleThumbActive: {
+    alignSelf: 'flex-end',
+  },
+  priceContainer: {
+    marginTop: 12,
   },
   buttonWrapper: {
     paddingHorizontal: 16,

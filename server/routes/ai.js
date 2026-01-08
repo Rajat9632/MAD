@@ -2,7 +2,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { enhanceImage, generateCaption, generateStory, generateVideoScript } = require('../services/aiService');
+const { enhanceImage, generateCaption, generateStory, generateVideoScript, generateVideoReel } = require('../services/aiService');
 
 // Image enhancement and captioning
 router.post('/enhance-image', async (req, res) => {
@@ -77,9 +77,26 @@ router.post('/generate-video-script', async (req, res) => {
     }
 
     const script = await generateVideoScript(artworkData, language || 'en', region || '');
-    res.json({ success: true, data: { script } });
+    res.json({ success: true, data: script });
   } catch (error) {
     console.error('Video script generation error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Generate AI video reel from artwork data and images
+router.post('/generate-video-reel', async (req, res) => {
+  try {
+    const { artworkData, imageUrls } = req.body;
+    
+    if (!artworkData) {
+      return res.status(400).json({ success: false, message: 'Artwork data is required' });
+    }
+
+    const videoReel = await generateVideoReel(artworkData, imageUrls || []);
+    res.json({ success: true, data: videoReel });
+  } catch (error) {
+    console.error('Video reel generation error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

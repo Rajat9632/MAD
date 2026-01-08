@@ -21,7 +21,7 @@ import ImageDisplay from '../../../components/ImageDisplay';
 import { useCallback } from 'react';
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user, logout, UpdateUserData } = useAuth();
   const router = useRouter();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -70,6 +70,36 @@ export default function ProfileScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRoleSwitch = async () => {
+    const currentRole = userData?.Role;
+    const newRole = currentRole === 'Artist' ? 'Buyer' : 'Artist';
+    
+    Alert.alert(
+      'Switch Role',
+      `Are you sure you want to switch from ${currentRole} to ${newRole}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Switch',
+          onPress: async () => {
+            try {
+              await UpdateUserData({
+                Role: newRole,
+                updatedAt: new Date().toISOString()
+              });
+              // Refresh user data
+              fetchUserData();
+              Alert.alert('Success', `Role switched to ${newRole}`);
+            } catch (error) {
+              console.error('Role switch error:', error);
+              Alert.alert('Error', 'Failed to switch role. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleLogout = async () => {
@@ -124,6 +154,21 @@ export default function ProfileScreen() {
               {userData?.Role === 'Artist' ? '🎨 Artist' : userData?.Role === 'Buyer' ? '🛍️ Buyer' : '👤 User'}
             </Text>
           </View>
+          
+          {/* Role Switch Button */}
+          <TouchableOpacity
+            style={styles.roleSwitchButton}
+            onPress={handleRoleSwitch}
+          >
+            <Ionicons 
+              name={userData?.Role === 'Artist' ? 'storefront-outline' : 'brush-outline'} 
+              size={18} 
+              color={Colors.bttn} 
+            />
+            <Text style={styles.roleSwitchText}>
+              Switch to {userData?.Role === 'Artist' ? 'Buyer' : 'Artist'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Stats Section */}
@@ -146,6 +191,29 @@ export default function ProfileScreen() {
 
         {/* Menu Items */}
         <View style={styles.menuContainer}>
+          {/* Purchase Requests - Show based on role */}
+          {userData?.Role === 'Artist' && (
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={() => router.push('/profile/purchase-requests')}
+            >
+              <Ionicons name="bag-outline" size={24} color="#111811" />
+              <Text style={styles.menuText}>Purchase Requests</Text>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
+          )}
+          
+          {userData?.Role === 'Buyer' && (
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={() => router.push('/profile/my-purchases')}
+            >
+              <Ionicons name="receipt-outline" size={24} color="#111811" />
+              <Text style={styles.menuText}>My Purchases</Text>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </TouchableOpacity>
+          )}
+          
           <TouchableOpacity 
             style={styles.menuItem}
             onPress={() => router.push('/profile/edit-profile')}
@@ -255,6 +323,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#111811',
+  },
+  roleSwitchButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f4f0',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 12,
+    gap: 8,
+  },
+  roleSwitchText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.bttn,
   },
   statsContainer: {
     flexDirection: 'row',
